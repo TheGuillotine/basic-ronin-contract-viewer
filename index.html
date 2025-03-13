@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ronin Contract Viewer</title>
+    <script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js" type="application/javascript"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .section {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .section h2 {
+            margin-top: 0;
+            color: #444;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .function-call {
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+        }
+        .function-call label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .output {
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-radius: 4px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .error {
+            color: #d9534f;
+            font-weight: bold;
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(0,0,0,.3);
+            border-radius: 50%;
+            border-top-color: #4CAF50;
+            animation: spin 1s ease-in-out infinite;
+            margin-left: 10px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        #contract-details {
+            margin-top: 20px;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Ronin Contract Explorer</h1>
+        
+        <div class="section">
+            <h2>Contract Information</h2>
+            <div>
+                <label for="contract-address">Contract Address:</label>
+                <input type="text" id="contract-address" value="0xfB597d6Fa6C08f5434e6eCf69114497343aE13Dd" placeholder="Enter contract address">
+                <button id="connect-btn">Connect to Contract</button>
+                <span id="connect-loading" class="loading hidden"></span>
+            </div>
+            <div id="contract-details" class="hidden">
+                <div class="output" id="contract-output">Not connected</div>
+            </div>
+        </div>
+        
+        <div class="section hidden" id="try-methods-section">
+            <h2>Try Common Read Methods</h2>
+            <p>Click the buttons below to try calling common read methods on the contract:</p>
+            
+            <div class="function-call">
+                <button class="try-method-btn" data-method="name">Try name()</button>
+                <button class="try-method-btn" data-method="symbol">Try symbol()</button>
+                <button class="try-method-btn" data-method="totalSupply">Try totalSupply()</button>
+                <button class="try-method-btn" data-method="balanceOf">Try balanceOf(owner)</button>
+                <input type="text" id="balanceOf-input" placeholder="Enter address to check balance" class="hidden">
+            </div>
+            
+            <div class="function-call">
+                <button class="try-method-btn" data-method="owner">Try owner()</button>
+                <button class="try-method-btn" data-method="getStakers">Try getStakers()</button>
+                <button class="try-method-btn" data-method="stakerCount">Try stakerCount()</button>
+                <button class="try-method-btn" data-method="getTotalStakers">Try getTotalStakers()</button>
+            </div>
+            
+            <div class="function-call">
+                <button class="try-method-btn" data-method="allStakers">Try allStakers()</button>
+                <button class="try-method-btn" data-method="stakers">Try stakers(index)</button>
+                <input type="number" id="stakers-input" placeholder="Enter index" min="0" value="0" class="hidden">
+            </div>
+            
+            <div class="function-call">
+                <button class="try-method-btn" data-method="getStakedTokens">Try getStakedTokens(staker)</button>
+                <input type="text" id="getStakedTokens-input" placeholder="Enter staker address" class="hidden">
+            </div>
+            
+            <div class="function-call">
+                <label for="custom-method">Try Custom Method:</label>
+                <input type="text" id="custom-method" placeholder="Enter method name (e.g., totalStaked)">
+                <button id="try-custom-method">Call Method</button>
+            </div>
+            
+            <div class="output" id="method-output">Results will appear here</div>
+        </div>
+        
+        <div class="section hidden" id="custom-call-section">
+            <h2>Advanced: Custom Contract Call</h2>
+            <p>Enter custom contract call information:</p>
+            
+            <div class="function-call">
+                <label for="method-signature">Method Signature:</label>
+                <input type="text" id="method-signature" placeholder="e.g., getStakers(uint256,uint256)">
+                
+                <label for="method-params">Parameters (comma separated):</label>
+                <input type="text" id="method-params" placeholder="e.g., 0,10">
+                
+                <button id="execute-call">Execute Call</button>
+            </div>
+            
+            <div class="output" id="custom-call-output">Results will appear here</div>
+        </div>
+    </div>
+
+    <script>
+        // Contract instance
+        let contract = null;
+        let provider = null;
+        
+        // DOM elements
+        const connectBtn = document.getElementById('connect-btn');
+        const connectLoading = document.getElementById('connect-loading');
+        const contractAddressInput = document.getElementById('contract-address');
+        const contractOutput = document.getElementById('contract-output');
+        const contractDetails = document.getElementById('contract-details');
+        const tryMethodsSection = document.getElementById('try-methods-section');
+        const methodOutput = document.getElementById('method-output');
+        const customCallSection = document.getElementById('custom-call-section');
+        const customCallOutput = document.getElementById('custom-call-output');
+        const tryCustomMethodBtn = document.getElementById('try-custom-method');
+        const executeCallBtn = document.getElementById('execute-call');
+        
+        // Standard ERC20/ERC721 ABI snippets
+        const commonABI = [
+            // ERC20/ERC721 functions
+            "function name() view returns (string)",
+            "function symbol() view returns (string)",
+            "function totalSupply() view returns (uint256)",
+            "function balanceOf(address owner) view returns (uint256)",
+            // Owner
+            "function owner() view returns (address)",
+            // Common staking functions
+            "function getStakers() view returns (address[])",
+            "function getTotalStakers() view returns (uint256)",
+            "function stakerCount() view returns (uint256)",
+            "function allStakers() view returns (address[])",
+            "function stakers(uint256) view returns (address)",
+            "function getStakedTokens(address) view returns (uint256[])"
+        ];
+        
+        // Connect to contract
+        connectBtn.addEventListener('click', async () => {
+            const contractAddress = contractAddressInput.value.trim();
+            
+            if (!ethers.utils.isAddress(contractAddress)) {
+                contractOutput.innerHTML = '<span class="error">Invalid contract address</span>';
+                return;
+            }
+            
+            try {
+                connectLoading.classList.remove('hidden');
+                contractOutput.textContent = 'Connecting...';
+                
+                // Connect to Ronin blockchain
+                provider = new ethers.providers.JsonRpcProvider('https://api.roninchain.com/rpc');
+                
+                // Check if the address is a contract
+                const code = await provider.getCode(contractAddress);
+                if (code === '0x') {
+                    contractOutput.innerHTML = '<span class="error">This address is not a contract</span>';
+                    connectLoading.classList.add('hidden');
+                    return;
+                }
+                
+                // Create contract instance with common ABI
+                contract = new ethers.Contract(contractAddress, commonABI, provider);
+                
+                // Get contract basic info
+                let contractInfo = '';
+                contractInfo += `<strong>Address:</strong> ${contractAddress}<br>`;
+                contractInfo += `<strong>Bytecode Size:</strong> ${((code.length - 2) / 2).toLocaleString()} bytes<br>`;
+                
+                // Try to get balance
+                const balance = await provider.getBalance(contractAddress);
+                contractInfo += `<strong>Balance:</strong> ${ethers.utils.formatEther(balance)} RON<br>`;
+                
+                contractOutput.innerHTML = contractInfo;
+                contractDetails.classList.remove('hidden');
+                tryMethodsSection.classList.remove('hidden');
+                customCallSection.classList.remove('hidden');
+                
+                connectLoading.classList.add('hidden');
+            } catch (error) {
+                console.error('Connection error:', error);
+                contractOutput.innerHTML = `<span class="error">Error connecting to contract: ${error.message}</span>`;
+                connectLoading.classList.add('hidden');
+            }
+        });
+        
+        // Try method buttons
+        document.querySelectorAll('.try-method-btn').forEach(button => {
+            button.addEventListener('click', async () => {
+                const method = button.getAttribute('data-method');
+                
+                // Handle methods that require parameters
+                if (method === 'balanceOf') {
+                    const input = document.getElementById('balanceOf-input');
+                    input.classList.remove('hidden');
+                    
+                    if (input.value.trim() === '') {
+                        methodOutput.innerHTML = '<span class="error">Please enter an address</span>';
+                        return;
+                    }
+                    
+                    if (!ethers.utils.isAddress(input.value.trim())) {
+                        methodOutput.innerHTML = '<span class="error">Invalid address format</span>';
+                        return;
+                    }
+                    
+                    await callMethod(method, [input.value.trim()]);
+                    return;
+                }
+                
+                if (method === 'stakers') {
+                    const input = document.getElementById('stakers-input');
+                    input.classList.remove('hidden');
+                    await callMethod(method, [parseInt(input.value)]);
+                    return;
+                }
+                
+                if (method === 'getStakedTokens') {
+                    const input = document.getElementById('getStakedTokens-input');
+                    input.classList.remove('hidden');
+                    
+                    if (input.value.trim() === '') {
+                        methodOutput.innerHTML = '<span class="error">Please enter a staker address</span>';
+                        return;
+                    }
+                    
+                    await callMethod(method, [input.value.trim()]);
+                    return;
+                }
+                
+                // Call method without parameters
+                await callMethod(method, []);
+            });
+        });
+        
+        // Show input fields when specific buttons are clicked
+        document.querySelector('[data-method="balanceOf"]').addEventListener('click', () => {
+            document.getElementById('balanceOf-input').classList.remove('hidden');
+        });
+        
+        document.querySelector('[data-method="stakers"]').addEventListener('click', () => {
+            document.getElementById('stakers-input').classList.remove('hidden');
+        });
+        
+        document.querySelector('[data-method="getStakedTokens"]').addEventListener('click', () => {
+            document.getElementById('getStakedTokens-input').classList.remove('hidden');
+        });
+        
+        // Try custom method
+        tryCustomMethodBtn.addEventListener('click', async () => {
+            const methodName = document.getElementById('custom-method').value.trim();
+            
+            if (methodName === '') {
+                methodOutput.innerHTML = '<span class="error">Please enter a method name</span>';
+                return;
+            }
+            
+            await callMethod(methodName, []);
+        });
+        
+        // Execute custom call
+        executeCallBtn.addEventListener('click', async () => {
+            const methodSignature = document.getElementById('method-signature').value.trim();
+            const paramsString = document.getElementById('method-params').value.trim();
+            
+            if (methodSignature === '') {
+                customCallOutput.innerHTML = '<span class="error">Please enter a method signature</span>';
+                return;
+            }
+            
+            try {
+                // Create new contract instance with custom ABI
+                const customContract = new ethers.Contract(
+                    contract.address, 
+                    [`function ${methodSignature}`], 
+                    provider
+                );
+                
+                // Parse method name from signature
+                const methodName = methodSignature.split('(')[0];
+                
+                // Parse parameters
+                const params = paramsString === '' ? [] : paramsString.split(',').map(param => {
+                    const trimmed = param.trim();
+                    // Try to parse numbers
+                    if (!isNaN(trimmed) && trimmed !== '') {
+                        return trimmed.includes('.') ? parseFloat(trimmed) : parseInt(trimmed);
+                    }
+                    // Handle booleans
+                    if (trimmed.toLowerCase() === 'true') return true;
+                    if (trimmed.toLowerCase() === 'false') return false;
+                    // Default to string
+                    return trimmed;
+                });
+                
+                // Call the method
+                customCallOutput.innerHTML = 'Executing call...';
+                
+                const result = await customContract[methodName](...params);
+                
+                // Format output based on result type
+                let formattedResult = '';
+                
+                if (ethers.BigNumber.isBigNumber(result)) {
+                    formattedResult = `BigNumber: ${result.toString()}`;
+                } else if (Array.isArray(result)) {
+                    formattedResult = `Array (${result.length} items):<br>` + 
+                                      result.map((item, index) => {
+                                          if (ethers.BigNumber.isBigNumber(item)) {
+                                              return `[${index}]: ${item.toString()}`;
+                                          }
+                                          return `[${index}]: ${item}`;
+                                      }).join('<br>');
+                } else {
+                    formattedResult = String(result);
+                }
+                
+                customCallOutput.innerHTML = formattedResult;
+                
+            } catch (error) {
+                console.error('Custom call error:', error);
+                customCallOutput.innerHTML = `<span class="error">Error: ${error.message}</span>`;
+            }
+        });
+        
+        // Helper function to call a method
+        async function callMethod(methodName, params) {
+            if (!contract) {
+                methodOutput.innerHTML = '<span class="error">Please connect to a contract first</span>';
+                return;
+            }
+            
+            try {
+                methodOutput.textContent = 'Calling method...';
+                
+                // Check if the method exists on the contract
+                if (typeof contract[methodName] !== 'function') {
+                    methodOutput.innerHTML = `<span class="error">Method "${methodName}" is not available on this contract</span>`;
+                    return;
+                }
+                
+                // Call the method
+                const result = await contract[methodName](...params);
+                
+                // Format output based on result type
+                let formattedResult = '';
+                
+                if (ethers.BigNumber.isBigNumber(result)) {
+                    formattedResult = `BigNumber: ${result.toString()}`;
+                } else if (Array.isArray(result)) {
+                    formattedResult = `Array (${result.length} items):<br>` + 
+                                      result.map((item, index) => {
+                                          if (ethers.BigNumber.isBigNumber(item)) {
+                                              return `[${index}]: ${item.toString()}`;
+                                          }
+                                          return `[${index}]: ${item}`;
+                                      }).join('<br>');
+                } else {
+                    formattedResult = String(result);
+                }
+                
+                methodOutput.innerHTML = formattedResult;
+                
+            } catch (error) {
+                console.error(`Error calling ${methodName}:`, error);
+                methodOutput.innerHTML = `<span class="error">Error calling ${methodName}: ${error.message}</span>`;
+            }
+        }
+    </script>
+</body>
+</html>
