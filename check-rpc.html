@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ronin RPC Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            background-color: #f0f0f0;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px 0;
+            display: block;
+            width: 100%;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .output {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .success {
+            color: green;
+            font-weight: bold;
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Ronin RPC Test</h1>
+    
+    <div class="container">
+        <h2>Test RPC Endpoints</h2>
+        <p>Click the buttons below to test different Ronin RPC endpoints:</p>
+        
+        <button id="test-rpc1">Test https://api.roninchain.com/rpc</button>
+        <button id="test-rpc2">Test https://api.roninchain.com/eth</button>
+        <button id="test-rpc3">Test https://api-gateway.skymavis.com/rpc</button>
+        
+        <div id="output" class="output">Results will appear here...</div>
+    </div>
+    
+    <div class="container">
+        <h2>Check Your Contract</h2>
+        <p>Once you've found a working RPC endpoint, test your contract:</p>
+        
+        <button id="check-contract">Check Contract 0xfB597d6Fa6C08f5434e6ecf69114497343aE13Dd</button>
+        
+        <div id="contract-output" class="output">Contract results will appear here...</div>
+    </div>
+
+    <script>
+        // Function to test an RPC endpoint
+        async function testRpcEndpoint(url, buttonId) {
+            const button = document.getElementById(buttonId);
+            const output = document.getElementById('output');
+            
+            button.disabled = true;
+            
+            try {
+                output.innerHTML = `Testing ${url}...`;
+                
+                // Create a simple JSON-RPC request to get the latest block number
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        jsonrpc: '2.0',
+                        method: 'eth_blockNumber',
+                        params: [],
+                        id: 1
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(`RPC Error: ${data.error.message || JSON.stringify(data.error)}`);
+                }
+                
+                const blockNumber = parseInt(data.result, 16);
+                
+                output.innerHTML = `<span class="success">SUCCESS: ${url} is working!</span><br>
+                Latest block number: ${blockNumber}<br><br>
+                Full response:<br>${JSON.stringify(data, null, 2)}`;
+                
+                // Store the working URL in localStorage for future use
+                localStorage.setItem('workingRpcUrl', url);
+                
+            } catch (error) {
+                output.innerHTML = `<span class="error">ERROR: ${url} is not accessible</span><br>
+                Error message: ${error.message}`;
+            } finally {
+                button.disabled = false;
+            }
+        }
+        
+        // Function to check the contract
+        async function checkContract() {
+            const contractOutput = document.getElementById('contract-output');
+            const contractAddress = '0xfB597d6Fa6C08f5434e6ecf69114497343aE13Dd';
+            
+            try {
+                contractOutput.innerHTML = 'Checking contract...';
+                
+                // Get the working RPC URL from localStorage or use the default
+                const rpcUrl = localStorage.getItem('workingRpcUrl') || 'https://api.roninchain.com/rpc';
+                
+                // Check if the address has code (is a contract)
+                const response = await fetch(rpcUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        jsonrpc: '2.0',
+                        method: 'eth_getCode',
+                        params: [contractAddress, 'latest'],
+                        id: 1
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(`RPC Error: ${data.error.message || JSON.stringify(data.error)}`);
+                }
+                
+                const code = data.result;
+                
+                if (code === '0x') {
+                    contractOutput.innerHTML = `<span class="error">This address is NOT a contract</span>`;
+                } else {
+                    // Get the contract balance
+                    const balanceResponse = await fetch(rpcUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            jsonrpc: '2.0',
+                            method: 'eth_getBalance',
+                            params: [contractAddress, 'latest'],
+                            id: 2
+                        })
+                    });
+                    
+                    const balanceData = await balanceResponse.json();
+                    const balance = parseInt(balanceData.result, 16) / 1e18; // Convert from wei to ETH/RON
+                    
+                    contractOutput.innerHTML = `<span class="success">This IS a valid contract!</span><br>
+                    Contract Address: ${contractAddress}<br>
+                    Contract Balance: ${balance} RON<br>
+                    Bytecode Length: ${(code.length - 2) / 2} bytes<br><br>
+                    <details>
+                        <summary>Show Bytecode</summary>
+                        <div style="max-height: 200px; overflow: auto; font-size: 12px;">
+                            ${code}
+                        </div>
+                    </details>`;
+                }
+                
+            } catch (error) {
+                contractOutput.innerHTML = `<span class="error">Error checking contract: ${error.message}</span>`;
+            }
+        }
+        
+        // Add event listeners
+        document.getElementById('test-rpc1').addEventListener('click', () => testRpcEndpoint('https://api.roninchain.com/rpc', 'test-rpc1'));
+        document.getElementById('test-rpc2').addEventListener('click', () => testRpcEndpoint('https://api.roninchain.com/eth', 'test-rpc2'));
+        document.getElementById('test-rpc3').addEventListener('click', () => testRpcEndpoint('https://api-gateway.skymavis.com/rpc', 'test-rpc3'));
+        document.getElementById('check-contract').addEventListener('click', checkContract);
+    </script>
+</body>
+</html>
