@@ -1,38 +1,52 @@
 # Basic Ronin Contract Viewer
 
-A simple web application to view basic information from a contract on the Ronin blockchain. This tool is designed to help you explore any contract on Ronin without needing to know its specific functions beforehand.
+A collection of simple web applications to view information from a contract on the Ronin blockchain. These tools are designed to help you explore any contract on Ronin without needing to know its specific functions beforehand.
+
+## Three Different Versions
+
+This repository contains three different implementations of a Ronin contract explorer, to maximize the chances that one will work for you:
+
+1. **index.html** - Uses ethers.js loaded from a CDN (needs internet access)
+2. **simple.html** - A lightweight version using direct JSON-RPC calls (most reliable)
+3. **web3-version.html** - Uses web3.js loaded from a CDN (needs internet access)
+
+Try them in order - if one doesn't work, try the next one!
 
 ## How to Use
 
-1. Download the files from this repository:
+1. **Download the files from this repository**:
    - Click the green "Code" button above
    - Select "Download ZIP"
    - Extract the ZIP file to a folder on your computer
 
-2. Open the `index.html` file in your web browser:
+2. **Open one of the HTML files in your web browser**:
+   - Start with `simple.html` (recommended)
    - Simply double-click the file to open it
    - No server setup required!
 
-3. Using the application:
+3. **Using the application**:
    - The default contract address is set to: `0xfB597d6Fa6C08f5434e6eCf69114497343aE13Dd`
-   - Click "Connect to Contract" to establish a connection
-   - Try the common read methods by clicking the buttons
-   - For methods that require parameters, input fields will appear
-   - Use the "Custom Method" section to try specific methods by name
-   - Use the "Advanced" section for more specific function calls
-
-## Features
-
-- Connect to any contract on the Ronin blockchain
-- View basic contract information (address, bytecode size, balance)
-- Try common read methods automatically (name, symbol, etc.)
-- Attempt to call common staking-related functions
-- Try custom methods by name
-- Execute advanced custom contract calls with parameters
+   - Click the connection or check button (varies by version)
+   - The application will attempt to connect to the Ronin blockchain
+   - Use the buttons to try calling common contract methods
+   - You can also try custom function names
 
 ## Troubleshooting
 
-If you get errors like "Method not available on this contract" or "Error calling [method]", it likely means the contract doesn't implement that specific function. Try other functions or use the custom method section.
+If you encounter errors:
+
+1. **"Failed to load resource" or library errors**:
+   - Try the `simple.html` version which doesn't rely on external libraries
+
+2. **Network errors**:
+   - Make sure you have an internet connection
+   - The Ronin RPC endpoint might be temporarily unavailable
+   - Try changing the RPC URL to `https://api.roninchain.com/eth` in the input field (web3 version)
+
+3. **Contract function errors**:
+   - If you get "Error calling [function]", it likely means the contract doesn't implement that specific function
+   - Try other function names
+   - The contract might have custom function names not included in the common list
 
 ## Requirements
 
@@ -42,4 +56,4 @@ If you get errors like "Method not available on this contract" or "Error calling
 
 ## Note
 
-This application only performs "read" operations on the blockchain and does not require any wallet connection or signing of transactions. It's completely safe to use as it only fetches public information from the blockchain.
+These applications only perform "read" operations on the blockchain and do not require any wallet connection or signing of transactions. They're completely safe to use as they only fetch public information from the blockchain.
