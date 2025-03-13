@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Ronin Contract Explorer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            text-align: center;
+            color: #2f4f4f;
+        }
+        .container {
+            background-color: #f5f5f5;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        input {
+            padding: 8px;
+            width: 100%;
+            margin-bottom: 10px;
+            box-sizing: border-box;
+        }
+        .output {
+            background-color: #f0f0f0;
+            padding: 15px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            word-break: break-all;
+            margin-top: 10px;
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Simple Ronin Contract Explorer</h1>
+    
+    <div class="container">
+        <p>This tool will attempt to make direct HTTP calls to the Ronin blockchain to get information about your contract.</p>
+        
+        <label for="contract-address">Contract Address:</label>
+        <input type="text" id="contract-address" value="0xfB597d6Fa6C08f5434e6eCf69114497343aE13Dd">
+        
+        <button id="check-contract">Check Contract</button>
+        <button id="check-bytecode">Get Bytecode</button>
+        
+        <div id="output" class="output">Results will appear here...</div>
+    </div>
+    
+    <div class="container">
+        <h3>Try Common Functions</h3>
+        <p>Click buttons to try calling common contract functions:</p>
+        
+        <div>
+            <button class="function-btn" data-function="name">name()</button>
+            <button class="function-btn" data-function="symbol">symbol()</button>
+            <button class="function-btn" data-function="totalSupply">totalSupply()</button>
+            <button class="function-btn" data-function="owner">owner()</button>
+        </div>
+        
+        <div>
+            <button class="function-btn" data-function="getStakers">getStakers()</button>
+            <button class="function-btn" data-function="getTotalStakers">getTotalStakers()</button>
+            <button class="function-btn" data-function="stakerCount">stakerCount()</button>
+            <button class="function-btn" data-function="getAllStakers">getAllStakers()</button>
+        </div>
+        
+        <div>
+            <h4>Custom Function Call</h4>
+            <input type="text" id="custom-function" placeholder="Enter function name (e.g. getStakerList)">
+            <button id="call-custom">Call Custom Function</button>
+        </div>
+    </div>
+
+    <script>
+        // Constants
+        const RONIN_RPC_URL = 'https://api.roninchain.com/rpc';
+        const outputEl = document.getElementById('output');
+        const addressEl = document.getElementById('contract-address');
+        
+        // Function to make JSON-RPC calls to Ronin blockchain
+        async function callRonin(method, params) {
+            try {
+                const response = await fetch(RONIN_RPC_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        jsonrpc: '2.0',
+                        id: Date.now(),
+                        method: method,
+                        params: params
+                    }),
+                });
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(`RPC Error: ${data.error.message || JSON.stringify(data.error)}`);
+                }
+                
+                return data.result;
+            } catch (error) {
+                throw new Error(`Network Error: ${error.message}`);
+            }
+        }
+        
+        // Get contract basic info
+        document.getElementById('check-contract').addEventListener('click', async () => {
+            const address = addressEl.value;
+            
+            if (!address || !address.startsWith('0x') || address.length !== 42) {
+                outputEl.innerHTML = '<span class="error">Please enter a valid Ronin address (0x...)</span>';
+                return;
+            }
+            
+            outputEl.innerText = 'Loading...';
+            
+            try {
+                // Get balance
+                const balance = await callRonin('eth_getBalance', [address, 'latest']);
+                const balanceInEth = parseInt(balance, 16) / 1e18;
+                
+                // Get transaction count
+                const txCount = await callRonin('eth_getTransactionCount', [address, 'latest']);
+                
+                // Check if it's a contract
+                const code = await callRonin('eth_getCode', [address, 'latest']);
+                const isContract = code !== '0x';
+                
+                let output = `Address: ${address}\n`;
+                output += `Is Contract: ${isContract ? 'Yes' : 'No'}\n`;
+                output += `Balance: ${balanceInEth.toFixed(6)} RON\n`;
+                output += `Transaction Count: ${parseInt(txCount, 16)}\n`;
+                
+                if (code !== '0x') {
+                    output += `Bytecode Size: ${(code.length - 2) / 2} bytes\n`;
+                }
+                
+                outputEl.innerText = output;
+            } catch (error) {
+                outputEl.innerHTML = `<span class="error">Error: ${error.message}</span>`;
+            }
+        });
+        
+        // Get contract bytecode
+        document.getElementById('check-bytecode').addEventListener('click', async () => {
+            const address = addressEl.value;
+            
+            if (!address || !address.startsWith('0x') || address.length !== 42) {
+                outputEl.innerHTML = '<span class="error">Please enter a valid Ronin address (0x...)</span>';
+                return;
+            }
+            
+            outputEl.innerText = 'Loading bytecode (this may take a moment)...';
+            
+            try {
+                const code = await callRonin('eth_getCode', [address, 'latest']);
+                
+                if (code === '0x') {
+                    outputEl.innerHTML = '<span class="error">This address is not a contract (no bytecode)</span>';
+                    return;
+                }
+                
+                outputEl.innerText = `Bytecode:\n${code}`;
+            } catch (error) {
+                outputEl.innerHTML = `<span class="error">Error: ${error.message}</span>`;
+            }
+        });
+        
+        // Function to encode a function signature to call a contract method
+        function encodeFunctionSignature(functionName) {
+            // Simple hex encoding of function name with parentheses
+            // This is a simplistic approach and only works for no-parameter functions
+            let result = '0x';
+            for (let i = 0; i < functionName.length; i++) {
+                result += functionName.charCodeAt(i).toString(16).padStart(2, '0');
+            }
+            return result;
+        }
+        
+        // Handle function button clicks
+        document.querySelectorAll('.function-btn').forEach(button => {
+            button.addEventListener('click', async () => {
+                const functionName = button.getAttribute('data-function');
+                callContractFunction(functionName);
+            });
+        });
+        
+        // Handle custom function call
+        document.getElementById('call-custom').addEventListener('click', async () => {
+            const functionName = document.getElementById('custom-function').value;
+            
+            if (!functionName) {
+                outputEl.innerHTML = '<span class="error">Please enter a function name</span>';
+                return;
+            }
+            
+            callContractFunction(functionName + '()');
+        });
+        
+        // Call a contract function
+        async function callContractFunction(functionName) {
+            const address = addressEl.value;
+            
+            if (!address || !address.startsWith('0x') || address.length !== 42) {
+                outputEl.innerHTML = '<span class="error">Please enter a valid Ronin address (0x...)</span>';
+                return;
+            }
+            
+            outputEl.innerText = `Calling ${functionName}...`;
+            
+            try {
+                // First get the function selector (this is a simplified approach)
+                const functionSelector = encodeFunctionSignature(functionName);
+                
+                // Call the contract
+                const result = await callRonin('eth_call', [{
+                    to: address,
+                    data: functionSelector
+                }, 'latest']);
+                
+                outputEl.innerText = `Function: ${functionName}\nResult: ${result}\n\nNote: Result is in hex format and needs to be decoded based on the return type.`;
+                
+            } catch (error) {
+                outputEl.innerHTML = `<span class="error">Error calling ${functionName}: ${error.message}</span>`;
+            }
+        }
+    </script>
+</body>
+</html>
