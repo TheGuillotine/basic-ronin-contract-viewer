@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web3 Ronin Contract Explorer</title>
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.8.1/dist/web3.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            text-align: center;
+            color: #2f4f4f;
+        }
+        .container {
+            background-color: #f5f5f5;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        input {
+            padding: 8px;
+            width: 100%;
+            margin-bottom: 10px;
+            box-sizing: border-box;
+        }
+        .output {
+            background-color: #f0f0f0;
+            padding: 15px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            word-break: break-all;
+            margin-top: 10px;
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Web3 Ronin Contract Explorer</h1>
+    
+    <div id="error-message" style="color: red; text-align: center; font-weight: bold;"></div>
+    
+    <div class="container">
+        <p>This tool uses Web3.js to explore your contract on Ronin blockchain.</p>
+        
+        <label for="rpc-url">Ronin RPC URL:</label>
+        <input type="text" id="rpc-url" value="https://api.roninchain.com/rpc">
+        
+        <label for="contract-address">Contract Address:</label>
+        <input type="text" id="contract-address" value="0xfB597d6Fa6C08f5434e6eCf69114497343aE13Dd">
+        
+        <button id="connect">Connect</button>
+        <div id="connection-status"></div>
+    </div>
+    
+    <div class="container hidden" id="contract-info">
+        <h3>Contract Information</h3>
+        <button id="get-info">Get Basic Info</button>
+        <div id="basic-info" class="output"></div>
+    </div>
+    
+    <div class="container hidden" id="function-calls">
+        <h3>Common Functions</h3>
+        <p>Try calling these common contract functions:</p>
+        
+        <div>
+            <h4>Token Standard Functions</h4>
+            <button class="try-function" data-signature="name()">name()</button>
+            <button class="try-function" data-signature="symbol()">symbol()</button>
+            <button class="try-function" data-signature="totalSupply()">totalSupply()</button>
+            <button class="try-function" data-signature="decimals()">decimals()</button>
+        </div>
+        
+        <div>
+            <h4>Admin Functions</h4>
+            <button class="try-function" data-signature="owner()">owner()</button>
+            <button class="try-function" data-signature="getOwner()">getOwner()</button>
+            <button class="try-function" data-signature="paused()">paused()</button>
+        </div>
+        
+        <div>
+            <h4>Staking Functions</h4>
+            <button class="try-function" data-signature="getTotalStakers()">getTotalStakers()</button>
+            <button class="try-function" data-signature="totalStakers()">totalStakers()</button>
+            <button class="try-function" data-signature="stakerCount()">stakerCount()</button>
+            <button class="try-function" data-signature="getStakers()">getStakers()</button>
+            <button class="try-function" data-signature="getAllStakers()">getAllStakers()</button>
+        </div>
+        
+        <div>
+            <h4>Custom Function Call</h4>
+            <input type="text" id="custom-signature" placeholder="e.g. myFunction() or totalStakes()">
+            <button id="call-custom">Call Function</button>
+        </div>
+        
+        <div id="function-result" class="output">Function results will appear here</div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const rpcUrlInput = document.getElementById('rpc-url');
+        const contractAddressInput = document.getElementById('contract-address');
+        const connectButton = document.getElementById('connect');
+        const connectionStatus = document.getElementById('connection-status');
+        const errorMessage = document.getElementById('error-message');
+        const contractInfoSection = document.getElementById('contract-info');
+        const functionCallsSection = document.getElementById('function-calls');
+        const basicInfoOutput = document.getElementById('basic-info');
+        const functionResultOutput = document.getElementById('function-result');
+        
+        // Global web3 instance
+        let web3;
+        let connected = false;
+        
+        // Check if Web3 is available
+        if (typeof Web3 === 'undefined') {
+            errorMessage.textContent = "Web3.js library failed to load. Please check your internet connection or try a different browser.";
+        }
+        
+        // Connect to Ronin network
+        connectButton.addEventListener('click', async () => {
+            const rpcUrl = rpcUrlInput.value.trim();
+            const contractAddress = contractAddressInput.value.trim();
+            
+            if (!rpcUrl) {
+                connectionStatus.innerHTML = '<span class="error">Please enter a valid RPC URL</span>';
+                return;
+            }
+            
+            if (!contractAddress || !contractAddress.startsWith('0x') || contractAddress.length !== 42) {
+                connectionStatus.innerHTML = '<span class="error">Please enter a valid contract address</span>';
+                return;
+            }
+            
+            connectionStatus.textContent = 'Connecting...';
+            
+            try {
+                // Initialize Web3 with the provided RPC URL
+                web3 = new Web3(new Web3.providers.HttpProvider(rpcUrl));
+                
+                // Check connection by getting network ID
+                const networkId = await web3.eth.net.getId();
+                
+                // Check if the address is a contract
+                const code = await web3.eth.getCode(contractAddress);
+                
+                if (code === '0x') {
+                    connectionStatus.innerHTML = '<span class="error">The provided address is not a contract</span>';
+                    return;
+                }
+                
+                connected = true;
+                connectionStatus.innerHTML = `<span style="color: green;">Connected to Ronin! Network ID: ${networkId}</span>`;
+                
+                // Show the contract info and function calls sections
+                contractInfoSection.classList.remove('hidden');
+                functionCallsSection.classList.remove('hidden');
+                
+            } catch (error) {
+                connectionStatus.innerHTML = `<span class="error">Connection failed: ${error.message}</span>`;
+                console.error(error);
+            }
+        });
+        
+        // Get basic contract info
+        document.getElementById('get-info').addEventListener('click', async () => {
+            if (!connected) {
+                basicInfoOutput.innerHTML = '<span class="error">Please connect to Ronin first</span>';
+                return;
+            }
+            
+            const contractAddress = contractAddressInput.value.trim();
+            
+            try {
+                basicInfoOutput.textContent = 'Loading...';
+                
+                // Get contract balance
+                const balance = await web3.eth.getBalance(contractAddress);
+                const balanceInEth = web3.utils.fromWei(balance, 'ether');
+                
+                // Get transaction count
+                const txCount = await web3.eth.getTransactionCount(contractAddress);
+                
+                // Get code
+                const code = await web3.eth.getCode(contractAddress);
+                
+                // Display the information
+                let info = `Contract Address: ${contractAddress}\n`;
+                info += `Balance: ${balanceInEth} RON\n`;
+                info += `Transaction Count: ${txCount}\n`;
+                info += `Code Size: ${(code.length - 2) / 2} bytes\n`;
+                
+                basicInfoOutput.textContent = info;
+                
+            } catch (error) {
+                basicInfoOutput.innerHTML = `<span class="error">Error getting contract info: ${error.message}</span>`;
+                console.error(error);
+            }
+        });
+        
+        // Call a contract function
+        async function callContractFunction(signature) {
+            if (!connected) {
+                functionResultOutput.innerHTML = '<span class="error">Please connect to Ronin first</span>';
+                return;
+            }
+            
+            const contractAddress = contractAddressInput.value.trim();
+            
+            try {
+                functionResultOutput.textContent = `Calling ${signature}...`;
+                
+                // Create a method signature hash (function selector)
+                const methodSignature = web3.utils.sha3(signature).substring(0, 10);
+                
+                // Call the contract method
+                const result = await web3.eth.call({
+                    to: contractAddress,
+                    data: methodSignature
+                });
+                
+                // Display the result
+                functionResultOutput.textContent = `Function: ${signature}\nResult: ${result}\n\nNote: This is the raw hex result. Interpretation depends on the function's return type.`;
+                
+            } catch (error) {
+                functionResultOutput.innerHTML = `<span class="error">Error calling ${signature}: ${error.message}</span>`;
+                console.error(error);
+            }
+        }
+        
+        // Add event listeners for function buttons
+        document.querySelectorAll('.try-function').forEach(button => {
+            button.addEventListener('click', () => {
+                const signature = button.getAttribute('data-signature');
+                callContractFunction(signature);
+            });
+        });
+        
+        // Call custom function
+        document.getElementById('call-custom').addEventListener('click', () => {
+            const signature = document.getElementById('custom-signature').value.trim();
+            
+            if (!signature) {
+                functionResultOutput.innerHTML = '<span class="error">Please enter a function signature</span>';
+                return;
+            }
+            
+            callContractFunction(signature);
+        });
+    </script>
+</body>
+</html>
