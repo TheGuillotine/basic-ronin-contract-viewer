@@ -1,59 +1,68 @@
-# Basic Ronin Contract Viewer
+# Ronin Contract Explorer
 
-A collection of simple web applications to view information from a contract on the Ronin blockchain. These tools are designed to help you explore any contract on Ronin without needing to know its specific functions beforehand.
+A collection of tools to explore and analyze contracts on the Ronin blockchain, particularly useful for checking staking contracts.
 
-## Three Different Versions
+## Browser-Based Tools
 
-This repository contains three different implementations of a Ronin contract explorer, to maximize the chances that one will work for you:
+If you're experiencing network errors with the browser-based tools, try the Node.js approach below.
 
-1. **index.html** - Uses ethers.js loaded from a CDN (needs internet access)
-2. **simple.html** - A lightweight version using direct JSON-RPC calls (most reliable)
-3. **web3-version.html** - Uses web3.js loaded from a CDN (needs internet access)
+1. **simple.html** - A lightweight version using direct JSON-RPC calls
+2. **web3-version.html** - Uses web3.js loaded from a CDN
+3. **index.html** - Uses ethers.js loaded from a CDN
+4. **check-rpc.html** - A simple tool to test if Ronin RPC endpoints are accessible from your network
 
-Try them in order - if one doesn't work, try the next one!
+## Node.js Approach (Recommended for Network Issues)
 
-## How to Use
+If you're having trouble connecting to Ronin from your browser, try the Node.js approach:
 
-1. **Download the files from this repository**:
-   - Click the green "Code" button above
-   - Select "Download ZIP"
-   - Extract the ZIP file to a folder on your computer
+1. **Install Node.js** from [nodejs.org](https://nodejs.org/)
+2. **Download this repository**
+3. **Run the batch file**: Double-click `run-check.bat` (Windows) or follow the manual steps below
 
-2. **Open one of the HTML files in your web browser**:
-   - Start with `simple.html` (recommended)
-   - Simply double-click the file to open it
-   - No server setup required!
+### Manual Steps for Node.js Approach:
 
-3. **Using the application**:
-   - The default contract address is set to: `0xfB597d6Fa6C08f5434e6eCf69114497343aE13Dd`
-   - Click the connection or check button (varies by version)
-   - The application will attempt to connect to the Ronin blockchain
-   - Use the buttons to try calling common contract methods
-   - You can also try custom function names
+```bash
+# Install required packages
+npm install axios
 
-## Troubleshooting
+# Run the script
+node node-script.js
+```
 
-If you encounter errors:
+The script will:
+1. Test multiple Ronin RPC endpoints to find one that works
+2. Check if your contract exists
+3. Get basic information about the contract
+4. Try calling various common contract methods to see which ones work
+5. Show a summary of the working methods
 
-1. **"Failed to load resource" or library errors**:
-   - Try the `simple.html` version which doesn't rely on external libraries
+## Checking Your Contract's Functions
 
-2. **Network errors**:
-   - Make sure you have an internet connection
-   - The Ronin RPC endpoint might be temporarily unavailable
-   - Try changing the RPC URL to `https://api.roninchain.com/eth` in the input field (web3 version)
+These tools will help you discover what functions your contract actually supports. The Node.js script tries a larger number of potential functions than the browser-based tools.
 
-3. **Contract function errors**:
-   - If you get "Error calling [function]", it likely means the contract doesn't implement that specific function
-   - Try other function names
-   - The contract might have custom function names not included in the common list
+## Troubleshooting Network Issues
 
-## Requirements
+If you're consistently getting network errors:
 
-- An internet connection to connect to the Ronin blockchain
-- A modern web browser (Chrome, Firefox, Edge, etc.)
-- No installation required!
+1. Check if your internet connection is working
+2. Try a different network (e.g., mobile hotspot instead of Wi-Fi)
+3. Some corporate or school networks block blockchain connections
+4. Try the Node.js approach which sometimes works better with restricted networks
+5. As a last resort, you might need to try from a different location
+
+## Usage Instructions
+
+### For Browser Tools:
+1. Download the files from this repository
+2. Open any of the HTML files in a modern web browser
+3. The contract address is pre-filled with your specified address
+4. Follow the on-screen instructions
+
+### For the Node.js Tool:
+1. Install Node.js from nodejs.org
+2. Double-click the `run-check.bat` file (on Windows)
+3. The script will automatically check your contract and display the results
 
 ## Note
 
-These applications only perform "read" operations on the blockchain and do not require any wallet connection or signing of transactions. They're completely safe to use as they only fetch public information from the blockchain.
+These tools only perform "read" operations on the blockchain and do not require any wallet connection or signing of transactions. They're completely safe to use as they only fetch public information from the blockchain.
